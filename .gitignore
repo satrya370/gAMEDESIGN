@@ -1,5 +1,7 @@
 node_modules/
 dist/
+.npm-cache/
+*.log
 *.map
 .DS_Store
 Thumbs.db

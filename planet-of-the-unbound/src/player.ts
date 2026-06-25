@@ -20,6 +20,65 @@ interface Player {
 let player: Player;
 let currentScene: SceneData = SCENE_2;
 
+const ASTRONAUT_CROP = { sx: 642, sy: 148, sw: 633, sh: 775 };
+
+function drawBaseAstronaut(ctx: CanvasRenderingContext2D): void {
+  const bodyX = PLAYER.WIDTH * 0.23;
+  const bodyY = PLAYER.HEIGHT * 0.34;
+  const bodyW = PLAYER.WIDTH * 0.54;
+  const bodyH = PLAYER.HEIGHT * 0.48;
+
+  ctx.save();
+  ctx.shadowColor = '#9ee7ff';
+  ctx.shadowBlur = 10;
+
+  ctx.fillStyle = '#e9fbff';
+  ctx.strokeStyle = '#6fd6ff';
+  ctx.lineWidth = 2;
+
+  ctx.beginPath();
+  ctx.ellipse(PLAYER.WIDTH / 2, PLAYER.HEIGHT * 0.22, PLAYER.WIDTH * 0.23, PLAYER.HEIGHT * 0.18, 0, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.stroke();
+
+  ctx.fillRect(bodyX, bodyY, bodyW, bodyH);
+  ctx.strokeRect(bodyX, bodyY, bodyW, bodyH);
+
+  ctx.fillStyle = '#111827';
+  ctx.beginPath();
+  ctx.ellipse(PLAYER.WIDTH / 2, PLAYER.HEIGHT * 0.22, PLAYER.WIDTH * 0.14, PLAYER.HEIGHT * 0.08, 0, 0, Math.PI * 2);
+  ctx.fill();
+
+  ctx.strokeStyle = '#e9fbff';
+  ctx.lineWidth = 5;
+  ctx.beginPath();
+  ctx.moveTo(bodyX + 2, bodyY + 8);
+  ctx.lineTo(4, PLAYER.HEIGHT * 0.62);
+  ctx.moveTo(bodyX + bodyW - 2, bodyY + 8);
+  ctx.lineTo(PLAYER.WIDTH - 4, PLAYER.HEIGHT * 0.62);
+  ctx.moveTo(bodyX + bodyW * 0.35, bodyY + bodyH);
+  ctx.lineTo(PLAYER.WIDTH * 0.35, PLAYER.HEIGHT - 3);
+  ctx.moveTo(bodyX + bodyW * 0.65, bodyY + bodyH);
+  ctx.lineTo(PLAYER.WIDTH * 0.65, PLAYER.HEIGHT - 3);
+  ctx.stroke();
+
+  ctx.restore();
+}
+
+function drawAssetHighlights(ctx: CanvasRenderingContext2D, img: HTMLImageElement): void {
+  const isFullFrameAsset = img.naturalWidth > 512 && img.naturalHeight > 512;
+  const sx = isFullFrameAsset ? 640 : 0;
+  const sy = isFullFrameAsset ? 130 : 0;
+  const sw = isFullFrameAsset ? 660 : img.naturalWidth;
+  const sh = isFullFrameAsset ? 820 : img.naturalHeight;
+
+  ctx.save();
+  ctx.globalCompositeOperation = 'screen';
+  ctx.filter = 'brightness(7) contrast(1.8)';
+  ctx.drawImage(img, sx, sy, sw, sh, 0, 0, PLAYER.WIDTH, PLAYER.HEIGHT);
+  ctx.restore();
+}
+
 export function setCurrentScene(scene: SceneData): void {
   currentScene = scene;
 }
@@ -128,26 +187,43 @@ export function drawPlayer(ctx: CanvasRenderingContext2D, camX: number, camY: nu
   const drawX = player.x - camX;
   const drawY = player.y - camY;
 
+  ctx.save();
   if (player.invincible) {
     ctx.globalAlpha = Math.floor(Date.now() / 100) % 2 === 0 ? 1 : 0.5;
   }
 
   const astronautImg = getAsset('astronaut_idle');
   if (astronautImg && astronautImg.complete && astronautImg.naturalWidth > 0) {
+    const visualW = 78;
+    const visualH = 96;
+    const visualX = drawX + PLAYER.WIDTH / 2 - visualW / 2;
+    const visualY = drawY + PLAYER.HEIGHT - visualH;
+
     ctx.save();
     if (player.facing === 'left') {
-      ctx.translate(drawX + PLAYER.WIDTH, drawY);
+      ctx.translate(visualX + visualW, visualY);
       ctx.scale(-1, 1);
-      ctx.drawImage(astronautImg, 0, 0, PLAYER.WIDTH, PLAYER.HEIGHT);
     } else {
-      ctx.drawImage(astronautImg, drawX, drawY, PLAYER.WIDTH, PLAYER.HEIGHT);
+      ctx.translate(visualX, visualY);
     }
+    ctx.drawImage(
+      astronautImg,
+      ASTRONAUT_CROP.sx,
+      ASTRONAUT_CROP.sy,
+      ASTRONAUT_CROP.sw,
+      ASTRONAUT_CROP.sh,
+      0,
+      0,
+      visualW,
+      visualH
+    );
     ctx.restore();
   } else {
-    // Fallback: white rectangle
-    ctx.fillStyle = '#ffffff';
-    ctx.fillRect(drawX, drawY, PLAYER.WIDTH, PLAYER.HEIGHT);
+    ctx.save();
+    ctx.translate(drawX, drawY);
+    drawBaseAstronaut(ctx);
+    ctx.restore();
   }
 
-  ctx.globalAlpha = 1;
+  ctx.restore();
 }

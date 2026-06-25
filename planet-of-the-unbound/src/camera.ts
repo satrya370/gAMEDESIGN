@@ -15,13 +15,20 @@ let boundsMaxY = 0;
 let viewW = 800;
 let viewH = 600;
 
+function clampCamera(): void {
+  if (cam.x < boundsMinX) cam.x = boundsMinX;
+  if (cam.x > boundsMaxX) cam.x = boundsMaxX;
+  if (cam.y < boundsMinY) cam.y = boundsMinY;
+  if (cam.y > boundsMaxY) cam.y = boundsMaxY;
+}
+
 export function initCamera(minX: number, minY: number, maxX: number, maxY: number, vw?: number, vh?: number): void {
   boundsMinX = minX;
   boundsMinY = minY;
-  boundsMaxX = maxX;
-  boundsMaxY = maxY;
   if (vw) viewW = vw;
   if (vh) viewH = vh;
+  boundsMaxX = Math.max(boundsMinX, maxX - viewW);
+  boundsMaxY = Math.max(boundsMinY, maxY - viewH);
   cam.x = 0;
   cam.y = 0;
   cam.targetX = 0;
@@ -41,10 +48,7 @@ export function updateCamera(_dt: number): void {
   cam.x += (goalX - cam.x) * CAMERA.SMOOTHING;
   cam.y += (goalY - cam.y) * CAMERA.SMOOTHING;
 
-  if (cam.x < boundsMinX) cam.x = boundsMinX;
-  if (cam.x > boundsMaxX) cam.x = boundsMaxX;
-  if (cam.y < boundsMinY) cam.y = boundsMinY;
-  if (cam.y > boundsMaxY) cam.y = boundsMaxY;
+  clampCamera();
 }
 
 export function getCamera(): Camera {
@@ -58,4 +62,5 @@ export function snapCamera(x: number, y: number): void {
   cam.y = goalY;
   cam.targetX = x;
   cam.targetY = y;
+  clampCamera();
 }

@@ -7,6 +7,7 @@ export interface AssetList {
 }
 
 const ASSET_PATHS: Record<string, string> = {
+  start_screen: 'assets/images/start_screen.jpg',
   astronaut_idle: 'assets/images/astronaut_idle.png',
   alien_shooter: 'assets/images/alien_shooter.png',
   background_moon: 'assets/images/background_moon.png',

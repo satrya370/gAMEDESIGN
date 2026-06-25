@@ -19,15 +19,16 @@ export interface SceneData {
 
 export const SCENE_2: SceneData = {
   platforms: [
-    { x: 50,   y: 350, width: 300, height: 20 },  // Bridge 1 (left)
-    { x: 450,  y: 350, width: 300, height: 20 },  // Bridge 2 (middle)
-    { x: 850,  y: 350, width: 300, height: 20 },  // Bridge 3 (right)
+    { x: -10,  y: 645, width: 400, height: 24 },
+    { x: 555,  y: 625, width: 605, height: 24 },
+    { x: 1325, y: 610, width: 650, height: 24 },
+    { x: 570,  y: 245, width: 430, height: 24 },
   ],
-  worldWidth: 1200,
-  worldHeight: 600,
-  voidY: 500,
-  playerSpawn: { x: 100, y: 286 },
-  portal: { x: 1100, y: 250, width: 40, height: 60 },
+  worldWidth: 1920,
+  worldHeight: 1080,
+  voidY: 1120,
+  playerSpawn: { x: 95, y: 580 },
+  portal: { x: 900, y: 180, width: 70, height: 90 },
 };
 
 export const SCENE_1: SceneData = {

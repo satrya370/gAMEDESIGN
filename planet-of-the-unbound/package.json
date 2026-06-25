@@ -7,7 +7,15 @@
     "watch": "esbuild src/main.ts --bundle --outfile=dist/bundle.js --sourcemap --watch",
     "dev": "esbuild src/main.ts --bundle --outfile=dist/bundle.js --sourcemap --serve=8080 --servedir=."
   },
-  "keywords": ["game", "platformer", "html5", "canvas"],
+  "keywords": [
+    "game",
+    "platformer",
+    "html5",
+    "canvas"
+  ],
   "author": "",
-  "license": "ISC"
+  "license": "ISC",
+  "devDependencies": {
+    "esbuild": "^0.28.1"
+  }
 }
