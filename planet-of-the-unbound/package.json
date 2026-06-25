@@ -1,0 +1,13 @@
+{
+  "name": "planet-of-the-unbound",
+  "version": "1.0.0",
+  "description": "2D Platformer Shooter — HTML5 Canvas + TypeScript",
+  "scripts": {
+    "build": "esbuild src/main.ts --bundle --outfile=dist/bundle.js --sourcemap",
+    "watch": "esbuild src/main.ts --bundle --outfile=dist/bundle.js --sourcemap --watch",
+    "dev": "esbuild src/main.ts --bundle --outfile=dist/bundle.js --sourcemap --serve=8080 --servedir=."
+  },
+  "keywords": ["game", "platformer", "html5", "canvas"],
+  "author": "",
+  "license": "ISC"
+}
