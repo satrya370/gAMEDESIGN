@@ -1,9 +1,9 @@
 # Planet of the Unbound — Software Specification
 
-> **Version:** 1.0  
-> **Date:** 2026-06-24  
+> **Version:** 1.1 (revised after commit 66b42c2)  
+> **Date:** 2026-06-24 (revised 2026-06-25)  
 > **Type:** Browser-based 2D Platformer Shooter Prototype  
-> **Engine:** HTML5 Canvas + JavaScript (no framework, no backend)
+> **Engine:** HTML5 Canvas + TypeScript (esbuild bundled)
 
 ---
 
@@ -25,7 +25,7 @@ Seorang astronot terdampar di planet asing yang dipenuhi hutan rimbun. Untuk kem
 | Component       | Technology                        |
 |-----------------|-----------------------------------|
 | Rendering       | HTML5 Canvas API                  |
-| Language        | JavaScript (ES6+)                 |
+| Language        | TypeScript (ES6+) — compiled via esbuild |
 | Backend         | None                              |
 | Audio           | None                              |
 | Build           | Static files, open `index.html`   |
@@ -163,8 +163,8 @@ planet-of-the-unbound/
 
 | From         | To           | Trigger                           |
 |--------------|--------------|-----------------------------------|
-| MENU         | CONTROLS     | Start Game clicked                |
-| CONTROLS     | PLAYING      | Player exits controls screen      |
+| MENU         | CUTSCENE     | Start Game pressed (Space/Click)  |
+| CUTSCENE     | PLAYING      | Cutscene ends (auto)              |
 | PLAYING      | PAUSED       | Esc pressed                       |
 | PAUSED       | PLAYING      | Resume clicked                    |
 | PAUSED       | MENU         | Quit clicked                      |
@@ -174,6 +174,8 @@ planet-of-the-unbound/
 | PLAYING      | VICTORY      | Scene 5 cutscene complete         |
 | VICTORY      | PLAYING      | Restart clicked                   |
 | VICTORY      | MENU         | Back to Menu clicked              |
+
+> **⚠️ Revisi v1.1:** CONTROLS screen dihapus dari flow. MENU → langsung ke CUTSCENE (Scene 1). Alasan: menyederhanakan onboarding, player belajar sambil bermain.
 
 ---
 
@@ -237,31 +239,27 @@ Victory Screen
 **Collectibles:** 1 Rocket Part  
 **Battery:** 8 (auto-refill on scene entry)
 
-**Layout:**
-- 3 bridge_platform arranged horizontally at similar height
+**Layout (revised v1.1):**
+- 4 bridge_platform arranged in 2 tiers (bukan 3 sejajar)
+- Bottom tier: 3 bridges di y=645, y=625, y=610 (lebar 400-650)
+- Upper tier: 1 bridge di y=245 (lebar 430)
 - Left bridge: astronaut entry point (from Scene 1)
-- Middle bridge: rocket_part_01.png (collectible)
+- Upper bridge: rocket_part_02.png (collectible)
 - Right bridge: small alien patrol area
-- Portal at top of scene (portal_effect.png) — transition to Scene 3
-- Dark portal on right side near alien
+- Portal at upper area (portal_effect.png) — transition to Scene 3
 - Vine decorations growing upward from bridges
 - Forest/bush layer at bottom (bush_decoration.png)
-- Background: moon (background_moon.png), butterflies, fog
+- Background: moon (background_moon.png), butterflies, fog (parallax layers)
 - Void below bridges (fall damage)
 
-**Gameplay Sequence:**
-1. Astronaut enters from left bridge
-2. Player learns movement: jump between bridges
-3. Player encounters first small alien on right bridge
-4. Player can shoot alien (2 laser hits to kill)
-5. Player collects rocket_part_01 on middle bridge
-6. Player reaches portal on right side → transition to Scene 3
+> **⚠️ Revisi v1.1:** World size diperbesar dari 1200x600 ke 1920x1080. Platform layout berubah total — sekarang 4 platform bertingkat (bukan 3 sejajar). Player spawn di (95, 580). Portal di (900, 180, 70x90).
 
-**Platform Details:**
-- 3 bridges separated by gaps
+**Platform Details (revised):**
+- 4 bridges dalam 2 tier (bottom + upper)
+- Bottom tier: 3 bridges dengan gap kecil
+- Upper tier: 1 bridge sebagai tujuan
 - Gaps require jumping to cross
 - Falling into gap = fall damage (void)
-- Bridges have vine decorations (leaf_decoration.png)
 
 **Enemy Behavior (Small Alien):**
 - Patrols right bridge area
@@ -585,9 +583,11 @@ Victory Screen
 
 - **Follow Mode:** Smooth follow (lerp-based, not instant snap)
 - **Smoothing Factor:** ~0.1 (tunable in constants.js)
-- **Bounds:** Camera clamped to scene boundaries (cannot see outside level)
+- **Bounds:** Camera clamped to scene boundaries (viewport-aware: max = worldSize - viewportSize)
 - **Vertical Offset:** Camera keeps player slightly below center (better visibility ahead)
 - **Horizontal Offset:** Camera keeps player slightly left of center (more view in direction of movement)
+
+> **⚠️ Revisi v1.1:** Camera bounds sekarang memperhitungkan viewport size. `boundsMaxX = worldWidth - viewportWidth` (sebelumnya hanya `worldWidth`). Ini mencegah camera menampilkan area di luar level. `snapCamera()` juga sekarang memanggil clamp function.
 
 ### 10.3 Scene Boundaries
 
@@ -684,16 +684,17 @@ When battery reaches 0:
 
 ### 12.4 Main Menu Screen
 
-**Type:** Full screen (HTML overlay or Canvas-rendered)
+**Type:** Full screen (Canvas-rendered)
 
 **Elements:**
-- Game title: "Planet of the Unbound"
-- Subtitle: "A lost astronaut. A living planet. One way home."
-- Single button: "Start Game"
-- Dark atmospheric background
+- Full-screen cover image: `start_screen.jpg` (center-crop scaled)
+- 5 animated floating butterflies (sine-wave motion)
+- No visible text buttons — press Space or Click to start
 
 **Interactions:**
-- Click "Start Game" → transition to Controls screen
+- Press Space / Click → transition directly to CUTSCENE (Scene 1)
+
+> **⚠️ Revisi v1.1:** Menu berubah dari teks statis + tombol ke full-screen cover image. CONTROLS screen dihapus — player langsung masuk game.
 
 ### 12.5 Controls Screen
 
@@ -897,29 +898,34 @@ const INPUT = {
 ### 17.1 Scene 2 Platforms
 
 ```
-Scene 2 Layout (side view):
+Scene 2 Layout (side view, revised v1.1):
 
-        [Portal]
-          |
-    ┌─────┴─────┐
-    │  Bridge 1  │     ← Entry from Scene 1
-    └────────────┘
-    
-              ┌────────────┐
-              │  Bridge 2  │  ← Rocket Part here
-              └────────────┘
-    
-                        ┌────────────┐
-                        │  Bridge 3  │  ← Small Alien here
-                        └────────────┘
-    
-    ▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓  ← Void (fall damage)
+    [Portal]
+      |
+    ┌─────────────┐
+    │ Upper Bridge│  ← rocket_part_02 (y=245, w=430)
+    └─────────────┘
+
+    ┌──────────────────┐
+    │   Bridge 1       │  ← Entry from Scene 1 (y=645, w=400)
+    └──────────────────┘
+
+              ┌────────────────────────────┐
+              │       Bridge 2             │  ← Middle area (y=625, w=605)
+              └────────────────────────────┘
+
+                        ┌──────────────────────────────────┐
+                        │           Bridge 3               │  ← Small Alien area (y=610, w=650)
+                        └──────────────────────────────────┘
+
+    ▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓  ← Void (y=1120)
 ```
 
-- 3 bridges at similar Y level
-- Gaps between bridges require jumping
-- Void below = fall damage
-- Portal at top-right → Scene 3
+- 4 bridges dalam 2 tier (bottom + upper)
+- Bottom tier: 3 bridges dengan gap kecil
+- Upper tier: 1 bridge sebagai tujuan utama
+- Void lebih dalam (y=1120) dibanding sebelumnya (y=500)
+- World size: 1920 x 1080 (dari 1200 x 600)
 
 ### 17.2 Scene 3 Platform
 
@@ -1026,43 +1032,45 @@ export const SCENES = {
 
 ## 19. Development Milestones
 
-### Milestone 1 — Project Setup
-- [ ] Create project structure (folders, files)
-- [ ] Setup HTML with Canvas element
-- [ ] Implement responsive canvas sizing
-- [ ] Create game loop (requestAnimationFrame)
-- [ ] Implement input handler (keyboard + mouse)
-- [ ] Load and display placeholder sprites
+> **Status per commit 66b42c2:** Milestone 1-4 ✅, Milestone 9 partial ✅
 
-### Milestone 2 — Player Movement
-- [ ] Left/right movement with friction
-- [ ] Gravity system
-- [ ] Jump mechanic
-- [ ] Ground collision (platform landing)
-- [ ] Basic animation states (idle, walk, jump, climb)
+### Milestone 1 — Project Setup ✅
+- [x] Create project structure (folders, files)
+- [x] Setup HTML with Canvas element
+- [x] Implement responsive canvas sizing
+- [x] Create game loop (requestAnimationFrame)
+- [x] Implement input handler (keyboard + mouse)
+- [x] Load and display placeholder sprites
 
-### Milestone 3 — Scene 1 Cutscene
-- [ ] Vertical scrolling camera
-- [ ] Vine climbing animation (auto)
-- [ ] 3-second cutscene timer
-- [ ] Transition to Scene 2
+### Milestone 2 — Player Movement ✅
+- [x] Left/right movement with friction
+- [x] Gravity system
+- [x] Jump mechanic
+- [x] Ground collision (platform landing)
+- [x] Basic animation states (idle, walk, jump, climb)
 
-### Milestone 4 — Scene 2 Level
-- [ ] Create 3 bridge platforms
-- [ ] Horizontal scroll camera
-- [ ] Platform collision
-- [ ] Void detection (fall damage)
-- [ ] Portal transition to Scene 3
-- [ ] Barrier system (no backtracking)
+### Milestone 3 — Scene 1 Cutscene ✅
+- [x] Vertical scrolling camera
+- [x] Vine climbing animation (auto)
+- [x] 3-second cutscene timer
+- [x] Transition to Scene 2
 
-### Milestone 5 — Shooting System
+### Milestone 4 — Scene 2 Level ✅
+- [x] Create 4 bridge platforms (revised dari 3)
+- [x] Horizontal scroll camera
+- [x] Platform collision
+- [x] Void detection (fall damage)
+- [x] Portal transition to Scene 3
+- [x] Barrier system (no backtracking)
+
+### Milestone 5 — Shooting System 🔲
 - [ ] Laser projectile creation
 - [ ] Laser horizontal movement
 - [ ] Ammo system (8 shots)
 - [ ] Laser collision (enemy, wall, screen edge)
 - [ ] Muzzle flash effect
 
-### Milestone 6 — Enemies
+### Milestone 6 — Enemies 🔲
 - [ ] Small alien: movement, chase behavior, HP
 - [ ] Enemy-player collision (damage)
 - [ ] Enemy death (HP reaches 0)
@@ -1071,40 +1079,40 @@ export const SCENES = {
 - [ ] UFO: movement, aimed shots
 - [ ] All enemy projectile systems
 
-### Milestone 7 — Scene 3 Boss Arena
+### Milestone 7 — Scene 3 Boss Arena 🔲
 - [ ] Create flat arena platform
 - [ ] Enemy spawn system (appear from edges)
 - [ ] Boss fight flow (small alien → boss + UFO)
 - [ ] Rocket part spawn after boss defeat
 - [ ] Transition to Scene 4
 
-### Milestone 8 — Cutscenes (Scene 4 & 5)
+### Milestone 8 — Cutscenes (Scene 4 & 5) 🔲
 - [ ] Scene 4: Rocket repair cutscene (5 sec)
 - [ ] Scene 5: Rocket launch cutscene (8 sec)
 - [ ] Victory screen trigger
 
-### Milestone 9 — UI & Menus
-- [ ] Main menu screen
-- [ ] Interactive controls screen
-- [ ] HUD (health, ammo, portrait, objective text)
-- [ ] Pause menu (Resume + Quit)
+### Milestone 9 — UI & Menus ⚠️ (partial)
+- [x] Main menu screen (cover image + animated butterflies)
+- [x] ~~Interactive controls screen~~ — DIHAPUS dari flow (v1.1)
+- [x] HUD (health, ammo, portrait, objective text)
+- [x] Pause menu (Resume + Quit)
 - [ ] Game over screen (PPT style)
 - [ ] Victory screen (PPT style)
 
-### Milestone 10 — Collectibles & Objective
+### Milestone 10 — Collectibles & Objective 🔲
 - [ ] Rocket part collectible logic
 - [ ] Counter display (0/3 → 1/3 → 2/3 → 3/3)
 - [ ] Objective text updates
 - [ ] "Return to rocket" trigger after 3/3
 
-### Milestone 11 — Polish
-- [ ] Invincibility frames (blinking effect)
+### Milestone 11 — Polish 🔲
+- [ ] Invincibility frames (blinking effect) — partial: alpha toggle ada
 - [ ] Minimal visual effects (muzzle flash, hit flash, pickup sparkle)
-- [ ] Background particles (butterflies, fog)
-- [ ] Camera smoothing (lerp)
+- [x] Background particles (butterflies, fog)
+- [x] Camera smoothing (lerp)
 - [ ] Balance tuning (speed, HP, ammo, timing)
 
-### Milestone 12 — Testing & Bug Fixes
+### Milestone 12 — Testing & Bug Fixes 🔲
 - [ ] Full playthrough test (start to victory)
 - [ ] Death and restart test
 - [ ] All collision edge cases
