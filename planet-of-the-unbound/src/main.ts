@@ -46,6 +46,7 @@ const ASSET_CROPS: Record<string, AssetCrop> = {
   portal_effect: { sx: 634, sy: 266, sw: 697, sh: 679 },
   rocket_part_02: { sx: 652, sy: 242, sw: 587, sh: 593 },
   vine_ladder: { sx: 898, sy: 96, sw: 179, sh: 889 },
+  leaf_decoration: { sx: 750, sy: 210, sw: 120, sh: 580 },
 };
 
 const MENU_BUTTERFLIES: MenuButterfly[] = [
@@ -313,14 +314,20 @@ function updatePlaying(_dt: number): void {
 }
 
 function drawSoftFog(ctx: CanvasRenderingContext2D, x: number, y: number, radius: number, alpha: number): void {
-  const gradient = ctx.createRadialGradient(x, y, radius * 0.1, x, y, radius);
-  gradient.addColorStop(0, `rgba(120, 120, 120, ${alpha})`);
-  gradient.addColorStop(0.45, `rgba(160, 160, 160, ${alpha * 0.42})`);
-  gradient.addColorStop(1, 'rgba(255, 255, 255, 0)');
-  ctx.fillStyle = gradient;
-  ctx.beginPath();
-  ctx.arc(x, y, radius, 0, Math.PI * 2);
-  ctx.fill();
+  // Safety check: skip jika nilai tidak finite
+  if (!isFinite(x) || !isFinite(y) || !isFinite(radius)) return;
+  try {
+    const gradient = ctx.createRadialGradient(x, y, radius * 0.1, x, y, radius);
+    gradient.addColorStop(0, `rgba(120, 120, 120, ${alpha})`);
+    gradient.addColorStop(0.45, `rgba(160, 160, 160, ${alpha * 0.42})`);
+    gradient.addColorStop(1, 'rgba(255, 255, 255, 0)');
+    ctx.fillStyle = gradient;
+    ctx.beginPath();
+    ctx.arc(x, y, radius, 0, Math.PI * 2);
+    ctx.fill();
+  } catch (e) {
+    // Skip fog jika error
+  }
 }
 
 function drawStageBackground(ctx: CanvasRenderingContext2D, w: number, h: number, camX: number, camY: number): void {
@@ -568,66 +575,86 @@ function transitionToScene2(): void {
 
 function drawCutscene(ctx: CanvasRenderingContext2D, w: number, h: number): void {
   const cs = getCutscene();
-  const cam = getCamera();
+  const time = cs.elapsed / 1000;
 
-  ctx.fillStyle = COLORS.VOID;
+  // Scene = 70% dari screen height, di bagian bawah
+  const sceneTop = h * 0.30;    // Scene mulai di 30% dari atas
+  const sceneBottom = h;         // Scene berakhir di bawah screen
+  const sceneHeight = sceneBottom - sceneTop;
+
+  // Pembagian lebar: 30% kiri, 20% tengah, 50% kanan
+  const wallLeftWidth = w * 0.30;
+  const gapWidth = w * 0.20;
+  const wallRightWidth = w * 0.50;
+  const wallRightX = wallLeftWidth + gapWidth;
+
+  // 1. Background terang
+  ctx.fillStyle = '#f7f7f4';
   ctx.fillRect(0, 0, w, h);
 
-  const moonImg = getAsset('background_moon');
-  if (moonImg) {
-    ctx.globalAlpha = 0.1;
-    ctx.drawImage(moonImg, w * 0.7, 20, 150, 150);
-    ctx.globalAlpha = 1;
+  // 2. Soft fog di gap (tengah)
+  drawSoftFog(ctx, wallLeftWidth + gapWidth / 2, sceneTop + sceneHeight * 0.4, 180, 0.25);
+  drawSoftFog(ctx, wallLeftWidth + gapWidth / 2 + 50, sceneTop + sceneHeight * 0.6, 160, 0.20);
+
+  // 3. Tembok KIRI — bush (30% lebar, full scene height)
+  drawCroppedAsset(ctx, 'bush_decoration',
+    0, sceneTop,
+    wallLeftWidth, sceneHeight,
+    { alpha: 0.95 }
+  );
+
+  // 4. Vine Kiri — di sisi kanan bush (dekorasi)
+  drawCroppedAsset(ctx, 'vine_ladder',
+    wallLeftWidth - 15, sceneTop,
+    30, sceneHeight,
+    { alpha: 0.90 }
+  );
+
+  // 5. Vine Kanan — di sisi kiri leaf (dipanjat karakter)
+  drawCroppedAsset(ctx, 'vine_ladder',
+    wallRightX - 15, sceneTop,
+    30, sceneHeight,
+    { alpha: 0.90 }
+  );
+
+  // 6. Tembok KANAN — leaf (50% lebar, full scene height)
+  drawCroppedAsset(ctx, 'leaf_decoration',
+    wallRightX, sceneTop,
+    wallRightWidth, sceneHeight,
+    { alpha: 0.95 }
+  );
+
+  // 7. Bridge di atas kanan (menempel leaf)
+  drawCroppedAsset(ctx, 'bridge_platform',
+    wallRightX, sceneTop,
+    wallRightWidth, 80,
+    { alpha: 0.95 }
+  );
+
+  // 8. Butterflies di gap (tengah)
+  const butterflies = [
+    { bx: wallLeftWidth + gapWidth * 0.3, by: sceneTop + sceneHeight * 0.3, ax: 30, ay: 20, sp: 1.2, ph: 0, sz: 25 },
+    { bx: wallLeftWidth + gapWidth * 0.6, by: sceneTop + sceneHeight * 0.5, ax: 25, ay: 15, sp: 0.8, ph: 1.5, sz: 20 },
+    { bx: wallLeftWidth + gapWidth * 0.5, by: sceneTop + sceneHeight * 0.7, ax: 35, ay: 25, sp: 1.0, ph: 3.0, sz: 28 },
+  ];
+  for (const b of butterflies) {
+    const bx = b.bx + Math.sin(time * b.sp + b.ph) * b.ax;
+    const by = b.by + Math.cos(time * b.sp * 1.23 + b.ph) * b.ay;
+    const alpha = 0.55 + Math.sin(time * 2 + b.ph) * 0.20;
+    drawCroppedAsset(ctx, 'butterfly_background',
+      bx, by,
+      b.sz, b.sz,
+      { alpha }
+    );
   }
 
-  const bflyImg = getAsset('butterfly_background');
-  if (bflyImg) {
-    ctx.globalAlpha = 0.6;
-    ctx.drawImage(bflyImg, 50, 200, 40, 40);
-    ctx.drawImage(bflyImg, w - 90, 150, 40, 40);
-    ctx.globalAlpha = 1;
-  }
-
-  const plantsImg = getAsset('environment_plants');
-  if (plantsImg) {
-    ctx.drawImage(plantsImg, 0, h - 120, 200, 120);
-    ctx.drawImage(plantsImg, w - 200, h - 120, 200, 120);
-  }
-
-  const bushImg = getAsset('bush_decoration');
-  if (bushImg) {
-    ctx.drawImage(bushImg, 0, h - 60, 180, 60);
-    ctx.drawImage(bushImg, w - 180, h - 60, 180, 60);
-  }
-
-  const leafImg = getAsset('leaf_decoration');
-  if (leafImg) {
-    ctx.drawImage(leafImg, 20, 10, 100, 70);
-    ctx.drawImage(leafImg, w - 120, 10, 100, 70);
-  }
-
-  const vineImg = getAsset('vine_ladder');
-  if (vineImg) {
-    for (const vine of SCENE_1.vinePositions || []) {
-      ctx.drawImage(vineImg, vine.x - cam.x, vine.y - cam.y, 32, vine.height);
-    }
-  }
-
-  const bridgeImg = getAsset('bridge_platform');
-  if (bridgeImg) {
-    for (const plat of SCENE_1.platforms) {
-      ctx.drawImage(bridgeImg, plat.x - cam.x, plat.y - cam.y, plat.width, plat.height);
-    }
-  }
-
-  const drawX = cs.astronautX - cam.x;
-  const drawY = cs.astronautY - cam.y;
-  const astronautImg = getAsset('astronaut_idle');
-  if (astronautImg) {
-    ctx.drawImage(astronautImg, drawX, drawY, PLAYER.WIDTH, PLAYER.HEIGHT);
-  } else {
+  // 9. Astronaut slide up vine kanan
+  // cs.astronautY = 0 (atas) sampai 1 (bawah), di-map ke scene
+  const astronautX = wallRightX - 30;
+  const astronautY = sceneTop + cs.astronautY * sceneHeight;
+  if (!drawCroppedAsset(ctx, 'astronaut_idle', astronautX, astronautY, 60, 75, { alpha: 1 })) {
     ctx.fillStyle = '#ffffff';
-    ctx.fillRect(drawX, drawY, PLAYER.WIDTH, PLAYER.HEIGHT);
+    ctx.fillRect(astronautX, astronautY, PLAYER.WIDTH, PLAYER.HEIGHT);
   }
 }
 

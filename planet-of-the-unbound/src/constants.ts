@@ -75,13 +75,22 @@ export const SCENES = {
 };
 
 export const SCENE_1 = {
-  WORLD_WIDTH: 400,
-  WORLD_HEIGHT: 800,
-  VINE_LEFT_X: 80,
-  VINE_RIGHT_X: 320,
-  BRIDGE_Y: 60,
-  CLIMB_START_Y: 700,
-  CLIMB_END_Y: 80,
+  WORLD_WIDTH: 800,
+  WORLD_HEIGHT: 4000,      // Lebih besar dari view height
+  SCENE_TOP_Y: 3000,       // Scene mulai di sini (atas)
+  SCENE_BOTTOM_Y: 3600,    // Scene berakhir di sini (bawah)
+  WALL_LEFT_X: 0,          // Tembok kiri mulai
+  WALL_LEFT_END_X: 240,    // Tembok kiri selesai (30%)
+  GAP_START_X: 240,        // Gap mulai
+  GAP_END_X: 400,          // Gap selesai (20%)
+  WALL_RIGHT_X: 400,       // Tembok kanan mulai (50%)
+  VINE_LEFT_X: 240,        // Vine kiri di sisi kanan bush
+  VINE_RIGHT_X: 400,       // Vine kanan di sisi kiri leaf
+  BRIDGE_X: 400,           // Bridge di atas kanan
+  BRIDGE_Y: 3000,          // Bridge di atas scene
+  BRIDGE_HEIGHT: 80,       // Tinggi bridge
+  CLIMB_START_Y: 3550,     // Astronaut mulai di bawah
+  CLIMB_END_Y: 3080,       // Astronaut sampai di bridge
 };
 
 export const CUTSCENE = {

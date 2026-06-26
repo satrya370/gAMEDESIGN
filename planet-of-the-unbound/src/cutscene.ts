@@ -46,12 +46,14 @@ export function updateCutscene(dt: number): void {
 
   cutscene.elapsed += dt;
 
-  // Scene 1: linear vertical climb
+  // Scene 1: slide up vine (ease-in-out)
   if (cutscene.sceneIndex === 1) {
     const t = Math.min(cutscene.elapsed / cutscene.duration, 1);
-    cutscene.astronautY = SCENE_1.CLIMB_START_Y +
-      (SCENE_1.CLIMB_END_Y - SCENE_1.CLIMB_START_Y) * t;
-    cutscene.astronautX = SCENE_1.VINE_RIGHT_X;
+    // Ease-in-out untuk efek slide
+    const eased = t < 0.5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2;
+    // Normalized: 1 = bawah, 0 = atas
+    cutscene.astronautY = 1 - eased;
+    cutscene.astronautX = 0; // Tidak dipakai, posisi fix di drawCutscene
   }
 
   if (cutscene.elapsed >= cutscene.duration) {

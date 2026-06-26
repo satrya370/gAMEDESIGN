@@ -33,18 +33,33 @@ export const SCENE_2: SceneData = {
 
 export const SCENE_1: SceneData = {
   platforms: [
-    { x: 100, y: 60, width: 200, height: 20 },
+    { x: 400, y: 3000, width: 400, height: 80 }, // Bridge di atas kanan
   ],
-  worldWidth: 400,
-  worldHeight: 800,
-  voidY: 850,
-  playerSpawn: { x: 320, y: 700 },
+  worldWidth: 800,
+  worldHeight: 4000,      // Lebih besar dari view height
+  voidY: 3900,
+  playerSpawn: { x: 400, y: 3550 }, // Di bawah vine kanan
   portal: { x: 0, y: 0, width: 0, height: 0 },
   vinePositions: [
-    { x: 80, y: 100, height: 600 },
-    { x: 320, y: 100, height: 600 },
+    { x: 240, y: 3000, height: 600 }, // Vine kiri — sisi kanan bush
+    { x: 400, y: 3000, height: 600 }, // Vine kanan — sisi kiri leaf
   ],
-};
+  // Layout properties untuk drawCutscene
+  SCENE_TOP_Y: 3250,
+  SCENE_BOTTOM_Y: 3850,
+  WALL_LEFT_X: 0,
+  WALL_LEFT_END_X: 240,
+  GAP_START_X: 240,
+  GAP_END_X: 400,
+  WALL_RIGHT_X: 400,
+  VINE_LEFT_X: 240,
+  VINE_RIGHT_X: 400,
+  BRIDGE_X: 400,
+  BRIDGE_Y: 3250,
+  BRIDGE_HEIGHT: 80,
+  CLIMB_START_Y: 3800,
+  CLIMB_END_Y: 3330,
+} as any; // Cast to any untuk tambah properties
 
 export function platformToAABB(p: Platform): AABB {
   return { x: p.x, y: p.y, width: p.width, height: p.height };
