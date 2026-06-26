@@ -577,61 +577,108 @@ function drawCutscene(ctx: CanvasRenderingContext2D, w: number, h: number): void
   const cs = getCutscene();
   const time = cs.elapsed / 1000;
 
-  // Scene = 70% dari screen height, di bagian bawah
-  const sceneTop = h * 0.30;    // Scene mulai di 30% dari atas
-  const sceneBottom = h;         // Scene berakhir di bawah screen
-  const sceneHeight = sceneBottom - sceneTop;
+  // Scene = 70% of screen height, positioned at bottom
+  const sceneTop = h * 0.30;
+  const sceneHeight = h - sceneTop;
 
-  // Pembagian lebar: 30% kiri, 20% tengah, 50% kanan
+  // Width divisions: 30% left wall, 20% gap, 50% right wall
   const wallLeftWidth = w * 0.30;
   const gapWidth = w * 0.20;
   const wallRightWidth = w * 0.50;
   const wallRightX = wallLeftWidth + gapWidth;
 
-  // 1. Background terang
+  // Helper: calculate cover-fit source rect so asset fills target area without distortion
+  function coverFit(
+    cropW: number, cropH: number,
+    targetW: number, targetH: number
+  ): { sw: number; sh: number; sx: number; sy: number; dw: number; dh: number } {
+    const scale = Math.max(targetW / cropW, targetH / cropH);
+    const sw = targetW / scale;
+    const sh = targetH / scale;
+    return {
+      sw, sh,
+      sx: (cropW - sw) / 2,
+      sy: (cropH - sh) / 2,
+      dw: targetW,
+      dh: targetH,
+    };
+  }
+
+  // Draw a decoration asset filling a target rectangle using cover-fit
+  function drawCoverFit(
+    name: string,
+    tx: number, ty: number,
+    tw: number, th: number,
+    options: { alpha?: number; clip?: boolean } = {}
+  ): void {
+    const crop = ASSET_CROPS[name];
+    if (!crop) return;
+    const fit = coverFit(crop.sw, crop.sh, tw, th);
+
+    // Calculate draw position so the drawn region covers the full target area
+    const drawX = tx - (fit.dw - tw) / 2;
+    const drawY = ty - (fit.dh - th) / 2;
+
+    if (options.clip !== false) {
+      ctx.save();
+      ctx.beginPath();
+      ctx.rect(tx, ty, tw, th);
+      ctx.clip();
+    }
+
+    drawCroppedAsset(
+      ctx, name,
+      drawX, drawY, fit.dw, fit.dh,
+      { alpha: options.alpha }
+    );
+
+    if (options.clip !== false) {
+      ctx.restore();
+    }
+  }
+
+  // 1. Bright background
   ctx.fillStyle = '#f7f7f4';
   ctx.fillRect(0, 0, w, h);
 
-  // 2. Soft fog di gap (tengah)
+  // 2. Soft fog in gap (center)
   drawSoftFog(ctx, wallLeftWidth + gapWidth / 2, sceneTop + sceneHeight * 0.4, 180, 0.25);
   drawSoftFog(ctx, wallLeftWidth + gapWidth / 2 + 50, sceneTop + sceneHeight * 0.6, 160, 0.20);
 
-  // 3. Tembok KIRI — bush (30% lebar, full scene height)
-  drawCroppedAsset(ctx, 'bush_decoration',
+  // 3. Left wall — bush_decoration (30% width, full scene height, cover-fit)
+  drawCoverFit('bush_decoration',
     0, sceneTop,
     wallLeftWidth, sceneHeight,
     { alpha: 0.95 }
   );
 
-  // 4. Vine Kiri — di sisi kanan bush (dekorasi)
+  // 4. Left vine — on the right edge of the bush wall (decoration)
+  const vineWidth = 30;
   drawCroppedAsset(ctx, 'vine_ladder',
-    wallLeftWidth - 15, sceneTop,
-    30, sceneHeight,
+    wallLeftWidth - vineWidth / 2, sceneTop,
+    vineWidth, sceneHeight,
     { alpha: 0.90 }
   );
 
-  // 5. Vine Kanan — di sisi kiri leaf (dipanjat karakter)
-  drawCroppedAsset(ctx, 'vine_ladder',
-    wallRightX - 15, sceneTop,
-    30, sceneHeight,
-    { alpha: 0.90 }
-  );
-
-  // 6. Tembok KANAN — leaf (50% lebar, full scene height)
-  drawCroppedAsset(ctx, 'leaf_decoration',
+  // 5. Right wall — leaf_decoration (50% width, full scene height, cover-fit)
+  drawCoverFit('leaf_decoration',
     wallRightX, sceneTop,
     wallRightWidth, sceneHeight,
     { alpha: 0.95 }
   );
 
-  // 7. Bridge di atas kanan (menempel leaf)
-  drawCroppedAsset(ctx, 'bridge_platform',
-    wallRightX, sceneTop,
-    wallRightWidth, 80,
-    { alpha: 0.95 }
+  // 6. Right vine — on the left edge of the leaf wall (astronaut climbs this)
+  const rightVineX = wallRightX - vineWidth / 2;
+  drawCroppedAsset(ctx, 'vine_ladder',
+    rightVineX, sceneTop,
+    vineWidth, sceneHeight,
+    { alpha: 0.90 }
   );
 
-  // 8. Butterflies di gap (tengah)
+  // 7. Bridge at top of right wall (use drawBridge with camX/camY = 0)
+  drawBridge(ctx, wallRightX, sceneTop, wallRightWidth, 0, 0);
+
+  // 8. Butterflies in gap (center)
   const butterflies = [
     { bx: wallLeftWidth + gapWidth * 0.3, by: sceneTop + sceneHeight * 0.3, ax: 30, ay: 20, sp: 1.2, ph: 0, sz: 25 },
     { bx: wallLeftWidth + gapWidth * 0.6, by: sceneTop + sceneHeight * 0.5, ax: 25, ay: 15, sp: 0.8, ph: 1.5, sz: 20 },
@@ -648,11 +695,11 @@ function drawCutscene(ctx: CanvasRenderingContext2D, w: number, h: number): void
     );
   }
 
-  // 9. Astronaut slide up vine kanan
-  // cs.astronautY = 0 (atas) sampai 1 (bawah), di-map ke scene
-  const astronautX = wallRightX - 30;
+  // 9. Astronaut slides up right vine
+  // cs.astronautY: 0 = top, 1 = bottom; ease-in-out in cutscene.ts
+  const astronautX = rightVineX - PLAYER.WIDTH / 2;
   const astronautY = sceneTop + cs.astronautY * sceneHeight;
-  if (!drawCroppedAsset(ctx, 'astronaut_idle', astronautX, astronautY, 60, 75, { alpha: 1 })) {
+  if (!drawCroppedAsset(ctx, 'astronaut_idle', astronautX, astronautY, PLAYER.WIDTH, PLAYER.HEIGHT, { alpha: 1 })) {
     ctx.fillStyle = '#ffffff';
     ctx.fillRect(astronautX, astronautY, PLAYER.WIDTH, PLAYER.HEIGHT);
   }
