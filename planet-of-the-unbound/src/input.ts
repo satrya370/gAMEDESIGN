@@ -65,10 +65,13 @@ function handleKeyDown(e: KeyboardEvent): void {
     case 'Space':
       keys.jump = true;
       justPressed.jump = true;
+      e.preventDefault();
       break;
     case 'KeyJ':
+    case 'Enter':
       keys.shoot = true;
       justPressed.shoot = true;
+      e.preventDefault();
       break;
     case 'KeyR':
       keys.restart = true;
@@ -101,9 +104,12 @@ function handleKeyUp(e: KeyboardEvent): void {
       break;
     case 'Space':
       keys.jump = false;
+      e.preventDefault();
       break;
     case 'KeyJ':
+    case 'Enter':
       keys.shoot = false;
+      e.preventDefault();
       break;
     case 'KeyR':
       keys.restart = false;
@@ -135,6 +141,8 @@ function handleMouseUp(e: MouseEvent): void {
 }
 
 export function initInput(): void {
+  mouseX = window.innerWidth / 2;
+  mouseY = window.innerHeight / 2;
   window.addEventListener('keydown', handleKeyDown);
   window.addEventListener('keyup', handleKeyUp);
   window.addEventListener('mousemove', handleMouseMove);

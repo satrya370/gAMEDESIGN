@@ -14,5 +14,5 @@ html, body {
 #gameCanvas {
   display: block;
   background: #1a1a2e;
-  cursor: crosshair;
+  cursor: none;
 }

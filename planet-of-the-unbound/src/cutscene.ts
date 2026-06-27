@@ -1,12 +1,10 @@
 import { SCENES } from './constants';
-import { SCENE_1 } from './scene';
 
 export interface CutsceneState {
   active: boolean;
   elapsed: number;
   duration: number;
-  astronautX: number;
-  astronautY: number;
+  progress: number;
   sceneIndex: number;
 }
 
@@ -14,16 +12,14 @@ let cutscene: CutsceneState = {
   active: false,
   elapsed: 0,
   duration: 0,
-  astronautX: 0,
-  astronautY: 0,
+  progress: 0,
   sceneIndex: 0,
 };
 
-export function startCutscene(sceneIndex: number, startX: number, startY: number): void {
+export function startCutscene(sceneIndex: number, _startX: number, _startY: number): void {
   cutscene.active = true;
   cutscene.elapsed = 0;
-  cutscene.astronautX = startX;
-  cutscene.astronautY = startY;
+  cutscene.progress = 0;
   cutscene.sceneIndex = sceneIndex;
 
   switch (sceneIndex) {
@@ -45,16 +41,7 @@ export function updateCutscene(dt: number): void {
   if (!cutscene.active) return;
 
   cutscene.elapsed += dt;
-
-  // Scene 1: slide up vine (ease-in-out)
-  if (cutscene.sceneIndex === 1) {
-    const t = Math.min(cutscene.elapsed / cutscene.duration, 1);
-    // Ease-in-out untuk efek slide
-    const eased = t < 0.5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2;
-    // Normalized: 1 = bawah, 0 = atas
-    cutscene.astronautY = 1 - eased;
-    cutscene.astronautX = 0; // Tidak dipakai, posisi fix di drawCutscene
-  }
+  cutscene.progress = Math.min(cutscene.elapsed / cutscene.duration, 1);
 
   if (cutscene.elapsed >= cutscene.duration) {
     cutscene.active = false;

@@ -2,7 +2,7 @@
 // game.js — Game state machine & scene manager
 // ============================================
 
-import { CANVAS, COLORS } from './constants';
+import { COLORS } from './constants';
 
 export type GameState = 'MENU' | 'CONTROLS' | 'PLAYING' | 'CUTSCENE' | 'PAUSED' | 'GAME_OVER' | 'VICTORY';
 
@@ -23,24 +23,25 @@ export function initGame(canvasEl: HTMLCanvasElement): void {
 }
 
 function resizeCanvas(): void {
-  const maxW = CANVAS.MAX_WIDTH;
-  const maxH = CANVAS.MAX_HEIGHT;
-  const windowW = window.innerWidth;
-  const windowH = window.innerHeight;
+  canvasWidth = Math.max(1, window.innerWidth);
+  canvasHeight = Math.max(1, window.innerHeight);
 
-  // Scale to fit window while maintaining max resolution
-  const scale = Math.min(windowW / maxW, windowH / maxH, 1);
+  const dpr = Math.max(1, window.devicePixelRatio || 1);
+  const pixelWidth = Math.round(canvasWidth * dpr);
+  const pixelHeight = Math.round(canvasHeight * dpr);
 
-  canvasWidth = Math.floor(maxW * scale);
-  canvasHeight = Math.floor(maxH * scale);
+  if (canvas.width !== pixelWidth || canvas.height !== pixelHeight) {
+    canvas.width = pixelWidth;
+    canvas.height = pixelHeight;
+  }
 
-  canvas.width = canvasWidth;
-  canvas.height = canvasHeight;
-
-  // Center canvas
   canvas.style.position = 'absolute';
-  canvas.style.left = `${(windowW - canvasWidth) / 2}px`;
-  canvas.style.top = `${(windowH - canvasHeight) / 2}px`;
+  canvas.style.left = '0';
+  canvas.style.top = '0';
+  canvas.style.width = `${canvasWidth}px`;
+  canvas.style.height = `${canvasHeight}px`;
+
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
 }
 
 export function getState(): GameState { return currentState; }

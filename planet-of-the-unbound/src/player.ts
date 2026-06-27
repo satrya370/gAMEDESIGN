@@ -2,7 +2,7 @@ import { GAME, PLAYER } from './constants';
 import { getAsset } from './assets';
 import { keys, justPressed } from './input';
 import { AABB, checkCollision, resolvePlayerPlatform } from './collision';
-import { SceneData, SCENE_2, platformToAABB } from './scene';
+import { SceneData, SCENE_2, VineData, platformToAABB } from './scene';
 
 interface Player {
   x: number;
@@ -13,6 +13,8 @@ interface Player {
   ammo: number;
   facing: 'left' | 'right';
   grounded: boolean;
+  climbing: boolean;
+  crouching: boolean;
   invincible: boolean;
   invincibleTimer: number;
 }
@@ -93,6 +95,8 @@ export function initPlayer(spawnX: number, spawnY: number): void {
     ammo: PLAYER.MAX_AMMO,
     facing: 'right',
     grounded: false,
+    climbing: false,
+    crouching: false,
     invincible: false,
     invincibleTimer: 0,
   };
@@ -102,53 +106,150 @@ export function getPlayer(): Player {
   return player;
 }
 
-export function updatePlayer(dt: number): void {
-  // Horizontal movement
-  if (keys.left) {
-    player.vx = -PLAYER.SPEED;
-    player.facing = 'left';
-  } else if (keys.right) {
-    player.vx = PLAYER.SPEED;
-    player.facing = 'right';
-  } else {
-    player.vx *= GAME.FRICTION;
-    if (Math.abs(player.vx) < 0.1) player.vx = 0;
+export function refillAmmo(): void {
+  player.ammo = PLAYER.MAX_AMMO;
+}
+
+export function consumeAmmo(): boolean {
+  if (player.ammo <= 0) return false;
+  player.ammo -= 1;
+  return true;
+}
+
+export function setPlayerPosition(x: number, y: number): void {
+  player.x = x;
+  player.y = y;
+  player.vx = 0;
+  player.vy = 0;
+  player.climbing = false;
+  player.crouching = false;
+}
+
+export function getPlayerAABB(): AABB {
+  if (player.crouching) {
+    const xInset = (PLAYER.WIDTH - PLAYER.CROUCH_HITBOX_WIDTH) / 2;
+    return {
+      x: player.x + xInset,
+      y: player.y + PLAYER.HEIGHT - PLAYER.CROUCH_HEIGHT,
+      width: PLAYER.CROUCH_HITBOX_WIDTH,
+      height: PLAYER.CROUCH_HEIGHT,
+    };
   }
 
-  player.x += player.vx;
+  return {
+    x: player.x + PLAYER.HITBOX_INSET_X,
+    y: player.y + PLAYER.HITBOX_INSET_Y,
+    width: PLAYER.HITBOX_WIDTH,
+    height: PLAYER.HITBOX_HEIGHT,
+  };
+}
 
-  // Jump (single press, only when grounded)
-  if (justPressed.jump && player.grounded) {
-    player.vy = PLAYER.JUMP_FORCE;
+export function updatePlayer(dt: number): void {
+  let vine = findTouchingVine();
+
+  if (!player.climbing && vine && (keys.up || keys.down)) {
+    player.climbing = true;
+    player.vx = 0;
+    player.vy = 0;
     player.grounded = false;
   }
 
-  // Gravity
-  player.vy += GAME.GRAVITY;
-  if (player.vy > GAME.MAX_FALL_SPEED) {
-    player.vy = GAME.MAX_FALL_SPEED;
+  if (player.climbing) {
+    player.crouching = false;
+    vine = vine ?? findClosestClimbVine();
+
+    if (!vine) {
+      player.climbing = false;
+    } else {
+      const vineCenterX = vine.x + vine.width / 2;
+      const targetX = vineCenterX - PLAYER.WIDTH * 0.48;
+
+      player.vx = 0;
+      player.vy = 0;
+      player.x += (targetX - player.x) * 0.45;
+
+      if (keys.up) {
+        player.y -= PLAYER.CLIMB_SPEED;
+      }
+      if (keys.down) {
+        player.y += PLAYER.CLIMB_SPEED;
+      }
+      if (keys.left) {
+        player.facing = 'left';
+      } else if (keys.right) {
+        player.facing = 'right';
+      }
+      if (justPressed.jump) {
+        player.climbing = false;
+        player.vy = PLAYER.JUMP_FORCE * 0.85;
+      }
+
+      const topLimit = vine.y - PLAYER.HEIGHT * 0.35;
+      const bottomLimit = vine.y + vine.height - PLAYER.HEIGHT * 0.2;
+      if (player.y < topLimit) player.y = topLimit;
+      if (player.y > bottomLimit) {
+        player.y = bottomLimit;
+        if (keys.down) player.climbing = false;
+      }
+    }
   }
 
-  player.y += player.vy;
+  if (!player.climbing) {
+    const wasGrounded = player.grounded;
+    const moveDirection = (keys.left ? -1 : 0) + (keys.right ? 1 : 0);
+    player.crouching = wasGrounded && keys.down && !keys.up;
+
+    const targetSpeed = player.crouching
+      ? PLAYER.SPEED * PLAYER.CROUCH_SPEED_MULTIPLIER
+      : PLAYER.SPEED;
+    const acceleration = wasGrounded ? PLAYER.GROUND_ACCELERATION : PLAYER.AIR_ACCELERATION;
+    const drag = wasGrounded ? GAME.FRICTION : PLAYER.AIR_DRAG;
+
+    if (moveDirection !== 0) {
+      player.vx += (moveDirection * targetSpeed - player.vx) * acceleration;
+      player.facing = moveDirection < 0 ? 'left' : 'right';
+    } else {
+      player.vx *= drag;
+      if (Math.abs(player.vx) < 0.05) player.vx = 0;
+    }
+
+    if (player.crouching && wasGrounded) {
+      player.vx *= 0.82;
+    }
+
+    player.x += player.vx;
+
+    if (justPressed.jump && wasGrounded && !player.crouching) {
+      player.vy = PLAYER.JUMP_FORCE;
+      player.grounded = false;
+    }
+
+    player.vy += player.vy > 0 ? GAME.GRAVITY * PLAYER.FALL_GRAVITY_MULTIPLIER : GAME.GRAVITY;
+    if (player.vy > GAME.MAX_FALL_SPEED) {
+      player.vy = GAME.MAX_FALL_SPEED;
+    }
+
+    player.y += player.vy;
+  }
 
   // Platform collision
   player.grounded = false;
-  const playerAABB: AABB = {
-    x: player.x,
-    y: player.y,
-    width: PLAYER.WIDTH,
-    height: PLAYER.HEIGHT,
-  };
+  const playerAABB = getPlayerAABB();
 
   for (const plat of currentScene.platforms) {
     const platAABB = platformToAABB(plat);
     if (checkCollision(playerAABB, platAABB)) {
-      if (player.vy >= 0 && player.y + PLAYER.HEIGHT > plat.y) {
-        player.y = resolvePlayerPlatform(playerAABB, platAABB);
+      if (player.vy >= 0 && playerAABB.y + playerAABB.height > plat.y) {
+        player.y = resolvePlayerPlatform({ ...playerAABB, height: PLAYER.HEIGHT }, platAABB);
         player.vy = 0;
         player.grounded = true;
+        player.climbing = false;
       }
     }
+  }
+
+  if (!player.grounded) {
+    player.crouching = false;
   }
 
   // Void damage
@@ -158,6 +259,8 @@ export function updatePlayer(dt: number): void {
     player.y = currentScene.playerSpawn.y;
     player.vy = 0;
     player.vx = 0;
+    player.climbing = false;
+    player.crouching = false;
   }
 
   // World bounds
@@ -175,6 +278,41 @@ export function updatePlayer(dt: number): void {
   }
 }
 
+function getClimbVines(): VineData[] {
+  return (currentScene.vinePositions ?? []).filter((vine) => vine.climbable !== false);
+}
+
+function findTouchingVine(): VineData | undefined {
+  const body = getPlayerAABB();
+  const centerX = body.x + body.width * 0.5;
+  const bodyTop = body.y + 6;
+  const bodyBottom = body.y + body.height - 4;
+
+  return getClimbVines().find((vine) => {
+    const left = vine.x + vine.width * 0.2;
+    const right = vine.x + vine.width * 0.8;
+    const top = vine.y;
+    const bottom = vine.y + vine.height;
+    return centerX >= left - 16 && centerX <= right + 16 && bodyBottom >= top + 10 && bodyTop <= bottom - 10;
+  });
+}
+
+function findClosestClimbVine(): VineData | undefined {
+  const body = getPlayerAABB();
+  const centerX = body.x + body.width * 0.5;
+  const centerY = body.y + body.height * 0.5;
+
+  return getClimbVines()
+    .map((vine) => {
+      const vineCenterX = vine.x + vine.width * 0.5;
+      const vineCenterY = vine.y + vine.height * 0.5;
+      const dx = Math.abs(vineCenterX - centerX);
+      const dy = Math.abs(vineCenterY - centerY);
+      return { vine, distance: dx + dy * 0.2 };
+    })
+    .sort((a, b) => a.distance - b.distance)[0]?.vine;
+}
+
 export function takeDamage(): void {
   if (player.invincible) return;
   player.hp--;
@@ -186,6 +324,7 @@ export function takeDamage(): void {
 export function drawPlayer(ctx: CanvasRenderingContext2D, camX: number, camY: number): void {
   const drawX = player.x - camX;
   const drawY = player.y - camY;
+  const crouchScale = player.crouching ? 0.70 : 1;
 
   ctx.save();
   if (player.invincible) {
@@ -194,8 +333,8 @@ export function drawPlayer(ctx: CanvasRenderingContext2D, camX: number, camY: nu
 
   const astronautImg = getAsset('astronaut_idle');
   if (astronautImg && astronautImg.complete && astronautImg.naturalWidth > 0) {
-    const visualW = 78;
-    const visualH = 96;
+    const visualW = player.crouching ? 74 : 78;
+    const visualH = 96 * crouchScale;
     const visualX = drawX + PLAYER.WIDTH / 2 - visualW / 2;
     const visualY = drawY + PLAYER.HEIGHT - visualH;
 
@@ -217,10 +356,23 @@ export function drawPlayer(ctx: CanvasRenderingContext2D, camX: number, camY: nu
       visualW,
       visualH
     );
+    if (player.grounded) {
+      ctx.strokeStyle = 'rgba(5, 5, 5, 0.55)';
+      ctx.lineWidth = 3;
+      ctx.beginPath();
+      ctx.moveTo(visualW * 0.22, visualH - 3);
+      ctx.lineTo(visualW * 0.45, visualH - 3);
+      ctx.moveTo(visualW * 0.58, visualH - 3);
+      ctx.lineTo(visualW * 0.82, visualH - 3);
+      ctx.stroke();
+    }
     ctx.restore();
   } else {
     ctx.save();
-    ctx.translate(drawX, drawY);
+    ctx.translate(drawX, drawY + (player.crouching ? 10 : 0));
+    if (player.crouching) {
+      ctx.scale(1, 0.82);
+    }
     drawBaseAstronaut(ctx);
     ctx.restore();
   }

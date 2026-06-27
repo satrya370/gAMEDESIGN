@@ -3,35 +3,47 @@
 // ============================================
 
 export const GAME = {
-  GRAVITY: 0.5,
-  MAX_FALL_SPEED: 12,
-  FRICTION: 0.8,
+  GRAVITY: 0.62,
+  MAX_FALL_SPEED: 13,
+  FRICTION: 0.72,
 };
 
 export const PLAYER = {
-  SPEED: 4,
-  JUMP_FORCE: -10,
+  SPEED: 4.6,
+  JUMP_FORCE: -10.6,
   CLIMB_SPEED: 3,
   MAX_HP: 3,
-  MAX_AMMO: 8,
+  MAX_AMMO: 15,
   INVINCIBILITY_DURATION: 1000, // ms
   WIDTH: 48,
   HEIGHT: 64,
+  GROUND_ACCELERATION: 0.42,
+  AIR_ACCELERATION: 0.18,
+  AIR_DRAG: 0.96,
+  FALL_GRAVITY_MULTIPLIER: 1.16,
+  CROUCH_SPEED_MULTIPLIER: 0.42,
+  HITBOX_WIDTH: 38,
+  HITBOX_HEIGHT: 60,
+  HITBOX_INSET_X: 5,
+  HITBOX_INSET_Y: 4,
+  CROUCH_HITBOX_WIDTH: 36,
+  CROUCH_HEIGHT: 38,
 };
 
 export const ENEMIES = {
   SMALL_ALIEN: {
     HP: 2,
-    SPEED: 2,
+    SPEED: 1.35,
     DAMAGE: 1,
     DETECTION_RANGE: 300,
+    SHOOT_INTERVAL: 3200,
   },
   BOSS_ALIEN: {
-    HP: 5,
-    SPEED: 1.5,
+    HP: 8,
+    SPEED: 1.2,
     DAMAGE: 1,
-    ROCK_ATTACK_INTERVAL: 2000, // ms between rock throws
-    METEOR_TRIGGER_HP: 3,       // triggers at 3 HP remaining
+    ROCK_ATTACK_INTERVAL: 2600, // ms between rock throws
+    METEOR_TRIGGER_HP: 4,       // triggers at 4 HP remaining
     METEOR_COUNT: 5,
     METEOR_INTERVAL: 500,       // ms between each meteor
   },
@@ -39,7 +51,7 @@ export const ENEMIES = {
     HP: 2,
     SPEED: 1,
     DAMAGE: 1,
-    SHOOT_INTERVAL: 3000,       // ms between shots
+    SHOOT_INTERVAL: 4200,       // ms between shots
   },
 };
 
@@ -48,8 +60,13 @@ export const PROJECTILES = {
     SPEED: 10,
     DAMAGE: 1,
   },
+  ALIEN_BULLET: {
+    BODY_SPEED: 2.3,
+    HIGH_SPEED: 2.55,
+    DAMAGE: 1,
+  },
   ROCK_BULLET: {
-    SPEED: 5,
+    SPEED: 4.6,
     DAMAGE: 1,
   },
   METEOR: {
@@ -57,7 +74,7 @@ export const PROJECTILES = {
     DAMAGE: 1,
   },
   UFO_BULLET: {
-    SPEED: 6,
+    SPEED: 3.6,
     DAMAGE: 1,
   },
 };
@@ -74,32 +91,8 @@ export const SCENES = {
   SCENE_5_DURATION: 8000, // ms
 };
 
-export const SCENE_1 = {
-  WORLD_WIDTH: 800,
-  WORLD_HEIGHT: 4000,      // Lebih besar dari view height
-  SCENE_TOP_Y: 3000,       // Scene mulai di sini (atas)
-  SCENE_BOTTOM_Y: 3600,    // Scene berakhir di sini (bawah)
-  WALL_LEFT_X: 0,          // Tembok kiri mulai
-  WALL_LEFT_END_X: 240,    // Tembok kiri selesai (30%)
-  GAP_START_X: 240,        // Gap mulai
-  GAP_END_X: 400,          // Gap selesai (20%)
-  WALL_RIGHT_X: 400,       // Tembok kanan mulai (50%)
-  VINE_LEFT_X: 240,        // Vine kiri di sisi kanan bush
-  VINE_RIGHT_X: 400,       // Vine kanan di sisi kiri leaf
-  BRIDGE_X: 400,           // Bridge di atas kanan
-  BRIDGE_Y: 3000,          // Bridge di atas scene
-  BRIDGE_HEIGHT: 80,       // Tinggi bridge
-  CLIMB_START_Y: 3550,     // Astronaut mulai di bawah
-  CLIMB_END_Y: 3080,       // Astronaut sampai di bridge
-};
-
 export const CUTSCENE = {
   CAMERA_Y_OFFSET: 100,
-};
-
-export const CANVAS = {
-  MAX_WIDTH: 1920,
-  MAX_HEIGHT: 1080,
 };
 
 export const COLORS = {
